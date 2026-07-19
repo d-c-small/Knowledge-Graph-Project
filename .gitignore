@@ -4,3 +4,4 @@
 
 # Jupyter
 .ipynb_checkpoints/
+/neo4j_connection.py

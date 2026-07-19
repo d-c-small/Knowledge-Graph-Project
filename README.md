@@ -12,6 +12,22 @@ The article used in this project is the **New York** Wikipedia page. All text pr
 
 ---
 
+## Applications & Use Cases
+
+Knowledge graphs turn raw text into a structured, machine-queryable network. Once built, this graph enables a wide range of downstream applications:
+
+| Use Case | Description |
+|---|---|
+| **Question Answering** | Query the graph to answer "what is related to X?" — instantly surface all entities and relationships connected to any node |
+| **Semantic Search** | Navigate relationship neighborhoods to find conceptually linked entities beyond simple keyword matching |
+| **Knowledge Base Reasoning** | Trace multi-hop paths between entities to answer complex questions (e.g., "how is Brooklyn connected to Wall Street?") |
+| **Fact Verification** | Check whether a specific subject–predicate–object relationship exists in the extracted knowledge |
+| **Recommendation** | Surface related entities for a given node to power content or topic recommendations |
+| **Graph-based ML** | Use graph structure, centrality scores, and node embeddings as features for downstream machine learning models |
+| **API / Service Backend** | Expose the graph as a queryable REST or GraphQL endpoint to drive external applications |
+
+---
+
 ## Graph Preview
 
 > **Open `Knowledge_Graph.html` in a browser** to explore the fully interactive graph — hover over edges to read relationship labels, and click nodes to highlight their neighborhood.
@@ -140,16 +156,31 @@ The NetworkX graph is queried to extract information. Given a node (entity), all
 
 ---
 
-## Example Query
+## Querying the Graph
 
-After building the graph, you can extract related entities for any node:
+Once the graph is built, NetworkX exposes a query API. Below are patterns that demonstrate the range of questions the graph can answer programmatically:
 
 ```python
-# Find all entities directly related to "manhattan"
-print(nx_graph.edges(['manhattan']))
+# 1. Outgoing relationships — what does this entity connect to?
+nx_graph.edges(['manhattan'])
+
+# 2. Incoming relationships — what entities reference this one?
+list(nx_graph.predecessors('manhattan'))
+
+# 3. Multi-hop reasoning — shortest path between two entities
+nx.shortest_path(nx_graph, source='new york', target='brooklyn')
+
+# 4. Neighborhood subgraph — all nodes within 2 hops of an entity
+nx.ego_graph(nx_graph, 'new york', radius=2)
+
+# 5. Most connected entities — centrality analysis
+sorted(nx.degree_centrality(nx_graph).items(), key=lambda x: x[1], reverse=True)[:10]
+
+# 6. Predicate filtering — find edges whose relationship contains a keyword
+[(u, v, d) for u, v, d in nx_graph.edges(data=True) if 'population' in d.get('title', '')]
 ```
 
-This returns all outgoing edges from the `manhattan` node, revealing the entities and relationships the graph has extracted for that subject.
+These patterns cover the core interaction modes used in question answering systems, semantic search, and knowledge base reasoning — see [Applications & Use Cases](#applications--use-cases) for the full breakdown.
 
 ---
 

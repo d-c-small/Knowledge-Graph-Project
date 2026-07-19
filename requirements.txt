@@ -1,0 +1,14 @@
+# Core dependencies for this project (Python 3.14 compatible)
+neo4j==6.2.0
+python-dotenv==1.2.2
+wikipedia==1.4.0
+requests==2.34.2
+spacy==3.8.13
+en-core-web-sm==3.8.0
+networkx==3.6.1
+pyvis==0.3.2
+
+# Optional notebook extras from the original tutorial pipeline.
+# These are skipped on Python 3.14 because they currently rely on older spaCy stacks.
+spacy-transformers==1.4.0; python_version < "3.14"
+coreferee==1.1.3; python_version < "3.12"

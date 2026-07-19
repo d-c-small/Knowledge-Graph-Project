@@ -1,6 +1,6 @@
 # Knowledge Graph from Text
 
-Build an interactive, queryable knowledge graph from a Wikipedia article using NLP — covering entity recognition, coreference resolution, relationship extraction, and graph visualization.
+Build an interactive, queryable knowledge graph from a Wikipedia article using NLP — covering entity recognition, entity normalization, relationship extraction, and graph visualization.
 
 ---
 
@@ -9,6 +9,27 @@ Build an interactive, queryable knowledge graph from a Wikipedia article using N
 A knowledge graph concentrates information in a compact, connected form that makes it easy to retrieve and reason over. This project pulls a Wikipedia article, processes the raw text through a full NLP pipeline, extracts subject–predicate–object triples, and assembles them into a directed graph that can be explored visually and queried programmatically.
 
 The article used in this project is the **New York** Wikipedia page. All text processing is handled by [spaCy](https://spacy.io/), graph construction by [NetworkX](https://networkx.org/), and interactive visualization by [pyvis](https://pyvis.readthedocs.io/).
+
+---
+
+## Skills Demonstrated
+
+- End-to-end NLP pipeline design (data ingestion, preprocessing, entity extraction, relationship extraction)
+- Practical graph engineering with directed graphs and labeled edges using NetworkX
+- Resilient data engineering with multi-stage fetch fallbacks for restricted network environments
+- NLP quality improvements through entity normalization and pronoun-link filtering
+- Interactive data product delivery by exporting a browser-ready graph visualization
+- Query design for machine consumption (neighbors, paths, centrality, and filtered relationships)
+
+---
+
+## Technical Problems Solved
+
+- Replaced a legacy coreference dependency with a Python 3.14-compatible normalization strategy
+- Added robust article-loading fallbacks to keep notebook execution stable when external APIs fail
+- Improved triple quality by filtering ambiguous pronoun-only subject/object candidates
+- Standardized graph output to a local UTF-8 HTML artifact for cross-environment portability
+- Structured the project for reproducibility with pinned dependencies and environment templates
 
 ---
 
@@ -49,7 +70,10 @@ Preprocessing          — lowercase, strip punctuation, headings, parentheses
 Named Entity Recognition (NER)    — identify people, places, organizations
      │
      ▼
-Coreference Resolution            — replace pronouns with their referents
+Entity Alias Mapping              — normalize entity mentions to canonical forms
+     │
+     ▼
+Pronoun Filtering                 — drop ambiguous pronoun-only links
      │
      ▼
 Relationship Extraction           — extract subject–predicate–object triples
@@ -71,11 +95,10 @@ Query / Information Extraction    — interrogate the graph for related entities
 | Library | Purpose |
 |---|---|
 | [`wikipedia`](https://pypi.org/project/wikipedia/) | Fetch Wikipedia article content via the MediaWiki API |
-| [`spaCy`](https://spacy.io/) (`en_core_web_lg`) | Tokenization, part-of-speech tagging, named entity recognition |
-| [`spacy-transformers`](https://spacy.io/usage/embeddings-transformers) | Transformer-based model support for spaCy pipelines |
-| [`coreferee`](https://github.com/msg-systems/coreferee) | Coreference resolution — resolve pronouns to their noun referents |
+| [`spaCy`](https://spacy.io/) (`en_core_web_sm` or larger) | Tokenization, part-of-speech tagging, noun chunking, named entity recognition |
 | [`NetworkX`](https://networkx.org/) | Construct and query a directed graph from extracted triples |
 | [`pyvis`](https://pyvis.readthedocs.io/) | Render the NetworkX graph as an interactive HTML visualization |
+| [`requests`](https://pypi.org/project/requests/) | Fallback article retrieval when the Wikipedia wrapper/API is unavailable |
 | `re` | Regex-based text cleaning during preprocessing |
 
 ---
@@ -94,25 +117,20 @@ Knowledge-Graph-Project/
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.14+ (tested)
 - Jupyter Notebook or JupyterLab
 
 ### Install Dependencies
 
 ```bash
-pip install wikipedia spacy spacy-transformers networkx pyvis coreferee
+pip install -r requirements.txt
 ```
 
-Download the required spaCy language model:
+If you are installing manually instead of using `requirements.txt`, install at least:
 
 ```bash
-python -m spacy download en_core_web_lg
-```
-
-Install the coreferee model for English:
-
-```bash
-python -m coreferee install en
+pip install wikipedia requests spacy networkx pyvis
+python -m spacy download en_core_web_sm
 ```
 
 ### Run the Notebook
@@ -128,25 +146,25 @@ Run all cells in order. The graph will be saved as an HTML file and rendered inl
 ## How It Works
 
 ### Task 1 — Import Libraries
-All required libraries are imported: `wikipedia`, `spacy`, `coreferee`, `networkx`, `pyvis`, and `re`.
+All required libraries are imported: `wikipedia`, `requests`, `spacy`, `networkx`, `pyvis`, and `re`.
 
 ### Task 2 — Load the Data
-The Wikipedia API is used to fetch the full text content of the **New York** article in English. The raw content is stored as a string for downstream processing.
+The notebook first tries the Wikipedia wrapper API to fetch the **New York** article, then falls back to a direct MediaWiki REST request, and finally uses a built-in fallback paragraph if both network calls fail. This keeps the pipeline runnable in restricted environments.
 
 ### Task 3 — Preprocess the Data
 The raw text is cleaned: converted to lowercase, newlines removed, punctuation stripped, and content inside parentheses, section headings (`==...==`), and everything after the "See Also" heading is removed using regular expressions.
 
 ### Task 4 — Recognize Named Entities
-spaCy's `en_core_web_lg` model processes the cleaned text and identifies named entities (people, locations, organizations, etc.), which are rendered with `displacy` for visual inspection.
+spaCy processes the cleaned text and identifies named entities (people, locations, organizations, etc.), which are rendered with `displacy` for visual inspection. The notebook automatically tries `en_core_web_lg`, then `en_core_web_md`, then `en_core_web_sm`.
 
-### Task 5 — Compute Coreference Clusters
-The `coreferee` component is added to the spaCy pipeline. It identifies coreference chains — groups of expressions that refer to the same real-world entity (e.g., "New York" → "the city" → "it").
+### Task 5 — Build an Entity Alias Map
+Instead of a separate coreference package, the notebook builds a lightweight alias map from spaCy entities to normalize mentions to canonical names (for example, mapping token-level aliases back to full entities).
 
-### Task 6 — Resolve Coreferences
-Each token in the document is checked against the coreference chains. Pronouns and referring expressions are replaced with their resolved noun phrase referents, producing cleaner, more explicit text for relationship extraction.
+### Task 6 — Normalize Entities and Filter Pronoun Links
+Entity mentions are normalized through the alias map, and pronoun-only subject/object candidates are filtered out. This improves triple quality while staying fully compatible with modern Python and spaCy versions.
 
 ### Task 7 — Extract Relationships
-A custom function iterates over sentences and uses spaCy's noun chunk detection to extract the first and last noun phrases as the **subject** and **object**, with the text in between serving as the **predicate**. This yields subject–predicate–object triples.
+A custom function iterates over sentences and uses spaCy noun chunks to extract the first and last noun phrases as the **subject** and **object**, then applies normalization and quality checks before keeping the predicate between them. This yields cleaner subject–predicate–object triples.
 
 ### Task 8 — Create a Graph
 A directed `NetworkX` graph is built from the extracted triples — nodes represent entities and edges represent the relationships between them. The graph is then passed to `pyvis` to generate an interactive HTML visualization where edges are labeled with the predicate text.

@@ -1,2 +1,6 @@
-/lost+found
-/.ipynb_checkpoints
+# Environment
+.env
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
